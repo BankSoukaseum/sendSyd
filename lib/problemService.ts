@@ -14,6 +14,7 @@ export type Problem = {
   reference_photo_url: string | null;
   start_description: string | null;
   finish_description: string | null;
+  reset_date: string | null;
   status: "pending" | "approved" | "rejected";
   created_by: string | null;
   created_at: string;
@@ -24,6 +25,7 @@ export type CreateProblemInput = {
   rotationId: string;
   name: string;
   gradeLabel: string;
+  resetDate: string;
   vGrade?: string;
   holdColour: string;
   holdColourHex: string;
@@ -150,6 +152,7 @@ export async function createProblem(
       rotation_id: input.rotationId,
       name: input.name.trim(),
       grade_label: input.gradeLabel.trim(),
+      reset_date: input.resetDate,
       v_grade: input.vGrade?.trim() || null,
       hold_colour: input.holdColour,
       hold_colour_hex: input.holdColourHex,

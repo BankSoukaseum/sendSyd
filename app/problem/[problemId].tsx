@@ -23,6 +23,21 @@ type RotationInfo = {
   wall_id: string;
 };
 
+function formatResetDate(dateValue: string | null | undefined) {
+  if (!dateValue) return "Not recorded";
+
+  // Parse a date-only value as local calendar components to avoid timezone shifts.
+  const [year, month, day] = dateValue.slice(0, 10).split("-").map(Number);
+
+  if (!year || !month || !day) return "Not recorded";
+
+  return new Date(year, month - 1, day).toLocaleDateString("en-AU", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
 export default function ProblemDetailScreen() {
   const router = useRouter();
   const { problemId } = useLocalSearchParams<{ problemId: string }>();
@@ -213,6 +228,13 @@ export default function ProblemDetailScreen() {
               <Text style={styles.infoLabel}>Rotation</Text>
               <Text style={styles.infoValue}>
                 {rotation?.rotation_number ?? "—"}
+              </Text>
+            </View>
+
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Set / reset date</Text>
+              <Text style={styles.infoValue}>
+                {formatResetDate(problem.reset_date)}
               </Text>
             </View>
           </View>

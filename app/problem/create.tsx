@@ -4,6 +4,7 @@ import {
     ActivityIndicator,
     Alert,
     Image,
+    Platform,
     Pressable,
     ScrollView,
     StatusBar,
@@ -16,6 +17,7 @@ import {
 
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 
+import DateTimePicker from "@react-native-community/datetimepicker";
 import * as ImagePicker from "expo-image-picker";
 
 import { supabase } from "@/lib/supabase";
@@ -56,6 +58,57 @@ const WALL_ANGLES = [
   "Roof",
   "Mixed angle",
 ];
+
+// ========================================
+// DATE HELPERS
+// ========================================
+
+function getLocalISODate() {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, "0");
+  const day = String(today.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+function isValidISODate(value: string) {
+  if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(value)) return false;
+
+  const [year, month, day] = value.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+
+  return (
+    date.getUTCFullYear() === year &&
+    date.getUTCMonth() === month - 1 &&
+    date.getUTCDate() === day
+  );
+}
+
+function parseISODate(value: string) {
+  if (!isValidISODate(value)) return new Date();
+
+  const [year, month, day] = value.split("-").map(Number);
+  return new Date(year, month - 1, day, 12, 0, 0);
+}
+
+function dateToISODate(value: Date) {
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, "0");
+  const day = String(value.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+function formatISODate(value: string) {
+  if (!isValidISODate(value)) return "Select a date";
+
+  return parseISODate(value).toLocaleDateString("en-AU", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+}
 
 // ========================================
 // CREATE PROBLEM SCREEN
@@ -107,6 +160,11 @@ export default function CreateProblemScreen() {
 
   const [name, setName] = useState("");
   const [gradeLabel, setGradeLabel] = useState("");
+  const [resetDate, setResetDate] = useState(getLocalISODate());
+  const [showResetDatePicker, setShowResetDatePicker] = useState(false);
+  const [pendingResetDate, setPendingResetDate] = useState(
+    parseISODate(getLocalISODate()),
+  );
   const [vGrade, setVGrade] = useState("");
 
   const [holdColour, setHoldColour] = useState("");
@@ -171,6 +229,15 @@ export default function CreateProblemScreen() {
         if (!isMounted) return;
 
         setRotation(rotationResult);
+
+        // Default the problem reset date to the active rotation's start date.
+        // Users can change it below if this individual problem was set later.
+        const initialResetDate = rotationResult?.started_at
+          ? rotationResult.started_at.slice(0, 10)
+          : getLocalISODate();
+
+        setResetDate(initialResetDate);
+        setPendingResetDate(parseISODate(initialResetDate));
 
         console.log("Problem form loaded successfully.");
         console.log("Signed in:", !!session?.user);
@@ -289,6 +356,14 @@ export default function CreateProblemScreen() {
       return;
     }
 
+    if (!isValidISODate(resetDate)) {
+      Alert.alert(
+        "Invalid reset date",
+        "Please enter a valid date in YYYY-MM-DD format, for example 2026-11-18.",
+      );
+      return;
+    }
+
     setSubmitting(true);
 
     try {
@@ -357,6 +432,7 @@ export default function CreateProblemScreen() {
         rotationId: rotation.id,
         name,
         gradeLabel,
+        resetDate,
         vGrade,
         holdColour,
         holdColourHex,
@@ -519,10 +595,76 @@ export default function CreateProblemScreen() {
           />
         </View>
 
+        {/* RESET DATE */}
+
+        <View style={styles.formSection}>
+          <Text style={styles.sectionTitle}>02 · Reset date</Text>
+
+          <Text style={styles.fieldLabel}>
+            DATE THIS PROBLEM WAS SET / RESET *
+          </Text>
+
+          <Pressable
+            style={styles.datePickerButton}
+            onPress={() => {
+              setPendingResetDate(parseISODate(resetDate));
+              setShowResetDatePicker(true);
+            }}
+          >
+            <View style={styles.datePickerCopy}>
+              <Text style={styles.datePickerValue}>
+                {formatISODate(resetDate)}
+              </Text>
+              <Text style={styles.datePickerHint}>TAP TO CHANGE DATE</Text>
+            </View>
+            <Text style={styles.datePickerIcon}>▦</Text>
+          </Pressable>
+
+          {showResetDatePicker && (
+            <View style={styles.datePickerPanel}>
+              {Platform.OS === "ios" && (
+                <View style={styles.datePickerPanelHeader}>
+                  <Text style={styles.datePickerPanelTitle}>
+                    Choose reset date
+                  </Text>
+                  <Pressable
+                    onPress={() => setShowResetDatePicker(false)}
+                    style={styles.datePickerDone}
+                  >
+                    <Text style={styles.datePickerDoneText}>DONE</Text>
+                  </Pressable>
+                </View>
+              )}
+
+              <DateTimePicker
+                value={pendingResetDate}
+                mode="date"
+                display={Platform.OS === "ios" ? "spinner" : "default"}
+                maximumDate={new Date()}
+                onChange={(event, selectedDate) => {
+                  if (Platform.OS === "android") {
+                    setShowResetDatePicker(false);
+                  }
+
+                  if (event.type !== "dismissed" && selectedDate) {
+                    setPendingResetDate(selectedDate);
+                    setResetDate(dateToISODate(selectedDate));
+                  }
+                }}
+              />
+            </View>
+          )}
+
+          <Text style={styles.helperText}>
+            Pre-filled with the rotation start date. Change it if this problem
+            was set or reset on a different day.
+          </Text>
+        </View>
+
         {/* GRADES */}
 
         <View style={styles.formSection}>
-          <Text style={styles.sectionTitle}>02 · Difficulty</Text>
+          <Text style={styles.sectionTitle}>03 · Difficulty</Text>
 
           <Text style={styles.fieldLabel}>GYM GRADE *</Text>
 
@@ -554,7 +696,7 @@ export default function CreateProblemScreen() {
         {/* HOLD COLOUR */}
 
         <View style={styles.formSection}>
-          <Text style={styles.sectionTitle}>03 · Hold colour</Text>
+          <Text style={styles.sectionTitle}>04 · Hold colour</Text>
 
           <Text style={styles.fieldLabel}>MAIN HOLD COLOUR *</Text>
 
@@ -593,7 +735,7 @@ export default function CreateProblemScreen() {
         {/* WALL ANGLE */}
 
         <View style={styles.formSection}>
-          <Text style={styles.sectionTitle}>04 · Wall angle</Text>
+          <Text style={styles.sectionTitle}>05 · Wall angle</Text>
 
           <Text style={styles.fieldLabel}>SELECT WALL ANGLE</Text>
 
@@ -627,7 +769,7 @@ export default function CreateProblemScreen() {
         {/* START AND FINISH */}
 
         <View style={styles.formSection}>
-          <Text style={styles.sectionTitle}>05 · Climbing details</Text>
+          <Text style={styles.sectionTitle}>06 · Climbing details</Text>
 
           <Text style={styles.fieldLabel}>STARTING HOLDS</Text>
 
@@ -659,7 +801,7 @@ export default function CreateProblemScreen() {
         {/* REFERENCE PHOTO */}
 
         <View style={styles.formSection}>
-          <Text style={styles.sectionTitle}>06 · Reference photo</Text>
+          <Text style={styles.sectionTitle}>07 · Reference photo</Text>
 
           <Text style={styles.fieldLabel}>UPLOAD WALL PHOTO</Text>
 
@@ -872,6 +1014,82 @@ function createStyles(theme: {
 
     formSection: {
       marginBottom: 28,
+    },
+
+    datePickerButton: {
+      minHeight: 66,
+      paddingHorizontal: 15,
+      paddingVertical: 12,
+      borderWidth: 1,
+      borderColor: theme.border,
+      borderRadius: 11,
+      backgroundColor: theme.input,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginBottom: 13,
+    },
+
+    datePickerCopy: {
+      flex: 1,
+      gap: 5,
+    },
+
+    datePickerValue: {
+      color: theme.text,
+      fontSize: 15,
+      fontWeight: "800",
+    },
+
+    datePickerHint: {
+      color: theme.muted,
+      fontSize: 8,
+      fontWeight: "900",
+      letterSpacing: 1,
+    },
+
+    datePickerIcon: {
+      color: theme.accent,
+      fontSize: 25,
+      marginLeft: 12,
+    },
+
+    datePickerPanel: {
+      borderWidth: 1,
+      borderColor: theme.border,
+      borderRadius: 12,
+      backgroundColor: theme.surface,
+      paddingHorizontal: 8,
+      paddingVertical: 8,
+      marginBottom: 13,
+    },
+
+    datePickerPanelHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: 10,
+      paddingVertical: 8,
+    },
+
+    datePickerPanelTitle: {
+      color: theme.text,
+      fontSize: 12,
+      fontWeight: "800",
+    },
+
+    datePickerDone: {
+      backgroundColor: theme.accent,
+      paddingHorizontal: 13,
+      paddingVertical: 8,
+      borderRadius: 8,
+    },
+
+    datePickerDoneText: {
+      color: "#191E1C",
+      fontSize: 9,
+      fontWeight: "900",
+      letterSpacing: 0.8,
     },
 
     sectionTitle: {
