@@ -273,12 +273,35 @@ export default function ProblemDetailScreen() {
               <Ionicons name="videocam-outline" size={25} color="#D7E65A" />
             </View>
 
+            {problem.status === "approved" && (
+              <Pressable
+                style={styles.addBetaButton}
+                onPress={() =>
+                  router.push({
+                    pathname: "/problem/beta-upload",
+                    params: { problemId: problem.id },
+                  })
+                }
+              >
+                <Ionicons
+                  name="cloud-upload-outline"
+                  size={18}
+                  color="#191E1C"
+                />
+                <Text style={styles.addBetaButtonText}>
+                  ADD YOUR BETA VIDEO
+                </Text>
+              </Pressable>
+            )}
+
             <View style={styles.betaEmpty}>
               <Ionicons name="play-circle-outline" size={42} color="#89938B" />
-              <Text style={styles.betaEmptyTitle}>No beta videos yet</Text>
+              <Text style={styles.betaEmptyTitle}>
+                No approved beta videos yet
+              </Text>
               <Text style={styles.betaEmptyText}>
-                Be the first to share your beta when video uploads are
-                available.
+                Share a video of your send. It will appear here after moderator
+                approval.
               </Text>
             </View>
           </View>
@@ -493,6 +516,23 @@ const styles = StyleSheet.create({
     color: "#89938B",
     fontSize: 12,
     marginTop: -8,
+  },
+  addBetaButton: {
+    minHeight: 50,
+    backgroundColor: "#D7E65A",
+    borderRadius: 12,
+    paddingHorizontal: 18,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 9,
+    marginTop: 18,
+  },
+  addBetaButtonText: {
+    color: "#191E1C",
+    fontSize: 10,
+    fontWeight: "900",
+    letterSpacing: 1,
   },
   betaEmpty: {
     backgroundColor: "#292F2C",
