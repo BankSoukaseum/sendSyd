@@ -1,68 +1,84 @@
-import { SymbolView } from 'expo-symbols';
-import { Link, Tabs } from 'expo-router';
-import { Platform, Pressable } from 'react-native';
+import { Ionicons } from "@expo/vector-icons";
+import { Tabs } from "expo-router";
 
-import Colors from '@/constants/Colors';
-import { useColorScheme } from '@/components/useColorScheme';
-import { useClientOnlyValue } from '@/components/useClientOnlyValue';
+const tabIcons: Record<string, keyof typeof Ionicons.glyphMap> = {
+  index: "home-outline",
+  gyms: "map-outline",
+  upload: "add-circle",
+  community: "people-outline",
+  profile: "person-circle-outline",
+};
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
-
   return (
     <Tabs
-      screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme].tint,
-        // Disable the static render of the header on web
-        // to prevent a hydration error in React Navigation v6.
-        headerShown: useClientOnlyValue(false, true),
-      }}>
+      screenOptions={({ route }) => ({
+        headerShown: false,
+
+        tabBarActiveTintColor: "#D7E65A",
+        tabBarInactiveTintColor: "#89938B",
+
+        tabBarStyle: {
+          backgroundColor: "#111512",
+          borderTopColor: "#303A33",
+          borderTopWidth: 1,
+          height: 85,
+          paddingTop: 10,
+          paddingBottom: 20,
+        },
+
+        tabBarLabelStyle: {
+          fontSize: 11,
+          fontWeight: "800",
+        },
+
+        tabBarIcon: ({ color, size, focused }) => {
+          const iconName = tabIcons[route.name] ?? "ellipse-outline";
+
+          return (
+            <Ionicons
+              name={iconName}
+              size={focused ? size + 2 : size}
+              color={color}
+            />
+          );
+        },
+      })}
+    >
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Tab One',
-          tabBarIcon: ({ color }) => (
-            <SymbolView
-              name={{
-                ios: 'chevron.left.forwardslash.chevron.right',
-                android: 'code',
-                web: 'code',
-              }}
-              tintColor={color}
-              size={28}
-            />
-          ),
-          headerRight: () => (
-            <Link href="/modal" asChild>
-              <Pressable style={{ marginRight: 15 }}>
-                {({ pressed }) => (
-                  <SymbolView
-                    name={{ ios: 'info.circle', android: 'info', web: 'info' }}
-                    size={25}
-                    tintColor={Colors[colorScheme].text}
-                    style={{ opacity: pressed ? 0.5 : 1 }}
-                  />
-                )}
-              </Pressable>
-            </Link>
-          ),
+          title: "Home",
         }}
       />
+
       <Tabs.Screen
-        name="two"
+        name="gyms"
         options={{
-          title: 'Tab Two',
-          tabBarIcon: ({ color }) => (
-            <SymbolView
-              name={{
-                ios: 'chevron.left.forwardslash.chevron.right',
-                android: 'code',
-                web: 'code',
-              }}
-              tintColor={color}
-              size={28}
-            />
-          ),
+          title: "Gyms",
+        }}
+      />
+
+      <Tabs.Screen
+        name="upload"
+        options={{
+          title: "Upload",
+          tabBarLabel: "Upload",
+        }}
+      />
+
+      <Tabs.Screen
+        name="community"
+        options={{
+          title: "Community",
+          tabBarLabel: "Community",
+        }}
+      />
+
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: "Profile",
         }}
       />
     </Tabs>
